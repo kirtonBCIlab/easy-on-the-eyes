@@ -8,14 +8,14 @@ import numpy as np
 import scipy.signal as signal
 from scipy.stats import chi2
 
-def butter_filt(raw:np.ndarray, fc:list, type:str, srate:float)-> np.ndarray:
+def butter_filt(data:np.ndarray, fc:list, type:str, srate:float)-> np.ndarray:
     """
         Implements Butterworth digital filter with zero-phase
 
         Parameters
         ----------
-            raw: ndarray
-                RAW EEG data to filter
+            data: ndarray
+                EEG data to filter
             fc: list
                 Cut-off frequencies [Hz]
             type: str
@@ -25,14 +25,18 @@ def butter_filt(raw:np.ndarray, fc:list, type:str, srate:float)-> np.ndarray:
 
         Returns
         -------
-            filt: nd.array
+            filt_data: nd.array
                 Filtered EEG data
     """
 
-    sos = signal.butter(4, fc, "bandpass", fs=srate, output="sos")
-    filt = signal.sosfiltfilt(sos, raw)
+    # Create filter
+    sos = signal.butter(4, fc, type, fs=srate, output="sos")
 
-    return filt
+    # Apply filter to longest dimension (i.e., time samples)
+    axis = np.argmax(data.shape)
+    filt_data = signal.sosfiltfilt(sos, data, axis=axis)
+
+    return filt_data
 
 def welch_confidence(x:np.ndarray, fs:float, nperseg:int, scaling:str,  pvalue:float = 0.95):
     """
