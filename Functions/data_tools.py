@@ -100,7 +100,7 @@ def create_epochs(
         eeg: mne.io.fiff.raw.Raw
             EEG raw array in an MNE format
         markers: pd.DataFrame
-            Markers used to creathe epochs
+            Markers used to create the epochs
         time: list[float]
             Times used for epoch data, must be len==2
         events: list[str]
@@ -313,7 +313,12 @@ def group_into_new_dimension(input_array, group_size):
     ]
 
 
-def epochs_from_unity_markers(eeg_time, eeg_data, marker_time, marker_data):
+def epochs_from_unity_markers(
+        eeg_time: np.ndarray,
+        eeg_data: np.ndarray,
+        marker_time: np.ndarray,
+        marker_data: list[str]
+        ) -> tuple((list[list[np.ndarray]], list)):
     """
     This function returns a list of EEG epochs and a list of marker names, based on
     the marker data provided.
@@ -322,6 +327,10 @@ def epochs_from_unity_markers(eeg_time, eeg_data, marker_time, marker_data):
     -----
         The marker data must have repeated markers
     """
+    # Make sure that data is in shape [samples, channels]
+    if eeg_data.shape[0] < eeg_data.shape[1]:
+        eeg_data = eeg_data.T
+
     # Initialize empty list
     eeg_epochs = []
 
@@ -366,3 +375,107 @@ def find_repeats(marker_data: list) -> tuple((np.ndarray, list)):
     labels = [marker_data[i][0] for i in repeats[:, 0]]
 
     return repeats, labels
+
+def fix_labels(labels: list[str]) -> list[str]:
+    """
+        Fix labels in pilot data (e.g., "tvep,1,-1,1,2Min", should be 
+        "tvep,1,-1,1,2, Min")
+
+        Parameters
+        ----------
+            labels: list[str]
+                Original set of labels found in Unity LSL stream
+
+        Returns
+        -------
+            fixed_labels: list[str]
+                List of labels with mistakes fixed
+    """
+
+    # Preallocate output
+    fixed_labels = []
+
+    for label in labels:
+        if label == "tvep,1,-1,1,2Min":
+            fixed_labels.append("tvep,1,-1,1,2, Min")
+        elif label == "tvep,1,-1,1,9.6Min":
+            fixed_labels.append("tvep,1,-1,1,9.6, Min")
+        elif label == "tvep,1,-1,1,16Min":
+            fixed_labels.append("tvep,1,-1,1,16, Min")
+        elif label == "tvep,1,-1,1,36Min":
+            fixed_labels.append("tvep,1,-1,1,36, Min")
+        else:
+            fixed_labels.append(label)
+
+    return fixed_labels
+
+def get_tvep_stimuli(labels: list[str]) -> dict:
+    """
+        Returns a dictionary of unique labels of the stimulus of labels that begin with "tvep"
+
+        Parameters
+        ----------
+            labels: list[str]
+                Complete list of labels from Unity markers
+
+        Returns
+        -------
+            unique_labels: list[str]
+                List of unique labels of stimulus that begin with "tvep"
+    """
+
+    tvep_labels = []
+
+    for label in labels:
+        if label.split(",")[0] == "tvep":
+            tvep_labels.append(label.split(",")[-1])
+  
+    dict_of_stimuli = {i: v for i, v in enumerate(list(set(tvep_labels)))}
+
+    return dict_of_stimuli
+
+def epochs_stim_freq(
+        eeg_epochs: list,
+        labels: list,
+        stimuli: dict,
+        freqs: dict
+        ) -> list:
+    """
+        Creates EEG epochs in a list of lists organized by stimuli and freqs
+
+        Parameters
+        ----------
+            eeg_epochs: list 
+                List of eeg epochs in the shape [samples, chans]
+            labels: list
+                Complete list of labels from Unity markers
+            stimuli: dict
+                Dictionary with the unique stimuli labels
+            freqs: dict
+                Dictionary with the uniquie frequency labels
+
+        Returns
+            eeg_epochs_organized: list
+                List of organized eeg epochs in the shape [stimuli][freqs][samples, chans]
+    """
+    # Preallocate list for organized epochs
+    eeg_epochs_organized = [[[] for j in range(len(freqs))] for i in range(len(stimuli))]
+    min_samples = np.inf
+
+    # Organize epochs by stim and freq
+    for e, epoch in enumerate(labels):
+        for s, stim in stimuli.items():
+            for f, freq in freqs.items():
+                if epoch == f"tvep,1,-1,1,{freq},{stim}":
+                    eeg_epochs_organized[s][f] = np.array(eeg_epochs[e])
+
+                    # Get number of minimum samples detected
+                    min_samples = int(np.min((min_samples, eeg_epochs[e].shape[0])))
+
+    # Trim all arrays to the min number of samples
+    for s, _ in stimuli.items():
+        for f, _ in freqs.items():
+            eeg_epochs_organized[s][f] = eeg_epochs_organized[s][f][:min_samples, :].T
+
+    return np.array(eeg_epochs_organized)
+    
