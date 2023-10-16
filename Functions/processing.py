@@ -106,6 +106,13 @@ def ssvep_snr(f:np.ndarray, pxx:np.ndarray, stim_freq:float, noise_band:float, n
             db_out: bool
                 Boolean to output in dB
     """
+    # Check that the pxx is two dimensional and organize channels as rows
+    if (pxx.ndim != 2):
+        print("Warning: The input array does not have two dimensions.")
+        return None
+    
+    if (pxx.shape[0] > pxx.shape[1]):
+        pxx = pxx.T
 
     # Preallocate and initialize variables
     peaks_index = np.zeros(nharms+1)  # Peaks of SSVEP, including stimulation frequency
