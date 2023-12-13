@@ -478,4 +478,30 @@ def epochs_stim_freq(
             eeg_epochs_organized[s][f] = eeg_epochs_organized[s][f][:min_samples, :].T
 
     return np.array(eeg_epochs_organized)
-    
+
+def epoch_interstim(
+    eeg_epochs: list,
+    labels: list,
+    stimuli: dict,
+    freqs: dict
+    ) -> list:
+    """ 
+        Creates an array with the 'inter stimulus' periods with shape [condition, epoch].
+
+    """
+    return None
+
+def concat_interstim_stim(
+    interstim: np.ndarray,
+    stim: np.ndarray
+    ) -> np.ndarray:
+    """
+        Concatenates the intersim and stim variables. 
+
+        Returns
+        -------
+            - `concat_array`: Concatenated array with shape [interstim, stim]. 
+               Where stim has shape [stim, frequency, epoch].
+    """
+
+    return None
