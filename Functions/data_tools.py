@@ -479,29 +479,59 @@ def epochs_stim_freq(
 
     return np.array(eeg_epochs_organized)
 
-def epoch_interstim(
-    eeg_epochs: list,
-    labels: list,
-    stimuli: dict,
-    freqs: dict
-    ) -> list:
-    """ 
-        Creates an array with the 'inter stimulus' periods with shape [condition, epoch].
-
+def labels_to_dict_and_array(labels:list) -> tuple[dict, np.ndarray]:
     """
-    return None
-
-def concat_interstim_stim(
-    interstim: np.ndarray,
-    stim: np.ndarray
-    ) -> np.ndarray:
+        Returns dictionary of labels with numeric code and numpy
+        array with the label codes
     """
-        Concatenates the intersim and stim variables. 
+    # Create an empty dictionary for labels
+    label_dict = {}
+  
+    # Loop through the list of strings
+    for label in labels:
+        # if the string is not in the dictionary, assign a new code to it
+        if label not in label_dict:
+            label_dict[label] = len(label_dict)
+    
+    # Create a numpy array with the codes of the strings
+    arr = np.array([label_dict[label] for label in labels])
+    
+    return [label_dict, arr]
 
+def trim_epochs(epochs:list) -> np.ndarray:
+    """
+        Takes a list of epochs of different length and trims to the shorter
+        epoch. 
+        
         Returns
         -------
-            - `concat_array`: Concatenated array with shape [interstim, stim]. 
-               Where stim has shape [stim, frequency, epoch].
+            trimmed_epochs: array with shape [epochs, channels, samples]
     """
+    # Initialize samples and channels counter
+    min_samples = np.inf
+    nchans = np.zeros(len(epochs), dtype=np.int16)
+    
+    # Get number of minimum samples
+    for [e,epoch] in enumerate(epochs):
+        epoch_shape = epoch.shape
+        epoch_len = int(np.max(epoch_shape))
+        nchans[e] = int(np.min(epoch_shape))
 
-    return None
+        min_samples = int(np.min((min_samples, epoch_len)))
+
+    # Check that all epochs have same number of channels
+    if (np.sum(np.abs(np.diff(nchans))) != 0):
+        print("Not all epochs have the same number of channels")
+        return None
+
+    # Preallocate and fill output array
+    trimmed_epochs = np.zeros((len(epochs), nchans[0], min_samples))
+    for [e,epoch] in enumerate(epochs):
+        # Make sure epoch is in shape [chans, samples]
+        epoch_shape = epoch.shape
+        if epoch_shape[0] > epoch_shape[1]:
+            epoch = epoch.T
+
+        trimmed_epochs[e,:,:] = epoch[:,:min_samples]
+
+    return trimmed_epochs
