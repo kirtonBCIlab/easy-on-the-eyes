@@ -535,3 +535,29 @@ def trim_epochs(epochs:list) -> np.ndarray:
         trimmed_epochs[e,:,:] = epoch[:,:min_samples]
 
     return trimmed_epochs
+
+def drop_epochs_by_label(epochs:list[np.ndarray], labels:list[str], label_to_drop:str) -> tuple[list[np.ndarray], list[str]]:
+    """
+    Drops epochs with a specific label from the list of epochs.
+
+    Parameters
+    ----------
+    epochs : List[np.ndarray]
+        List of EEG epochs.
+    labels : List[str]
+        List of corresponding marker labels.
+    label_to_drop : str
+        Label of the epochs to be dropped.
+
+    Returns
+    -------
+    Tuple[List[np.ndarray], List[str]]
+        A tuple containing the modified list of EEG epochs and labels.
+    """
+    # Use list comprehension to filter out epochs with the specified label
+    filtered_epochs = [epoch for epoch, label in zip(epochs, labels) if label != label_to_drop]
+
+    # Update the list of labels accordingly
+    filtered_labels = [label for label in labels if label != label_to_drop]
+
+    return filtered_epochs, filtered_labels
