@@ -537,7 +537,7 @@ def trim_epochs(epochs:list) -> np.ndarray:
     return trimmed_epochs
 
 
-def drop_epoch_by_label(epochs:list[np.ndarray], labels:list[str], label_to_drop:list[str]) -> tuple[list[np.ndarray], list[str]]:
+def drop_epochs_by_label(epochs:list[np.ndarray], labels:list[str], label_to_drop:list[str]) -> tuple[list[np.ndarray], list[str]]:
     """
     Drops epochs with a specific label from the list of epochs.
 
@@ -562,3 +562,12 @@ def drop_epoch_by_label(epochs:list[np.ndarray], labels:list[str], label_to_drop
     filtered_labels = [label for label in labels if label not in label_to_drop]
 
     return filtered_epochs, filtered_labels
+
+def trim_epochs_by_length(epochs:list, length:int) -> np.ndarray:
+    """
+        Takes a list of epochs of different length and trims all into the specified number of seconds 
+        
+        Returns
+        -------
+            trimmed_epochs: array with shape [epochs, channels, samples]
+    """
