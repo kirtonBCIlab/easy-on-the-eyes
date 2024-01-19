@@ -478,4 +478,96 @@ def epochs_stim_freq(
             eeg_epochs_organized[s][f] = eeg_epochs_organized[s][f][:min_samples, :].T
 
     return np.array(eeg_epochs_organized)
+
+def labels_to_dict_and_array(labels:list) -> tuple[dict, np.ndarray]:
+    """
+        Returns dictionary of labels with numeric code and numpy
+        array with the label codes
+    """
+    # Create an empty dictionary for labels
+    label_dict = {}
+  
+    # Loop through the list of strings
+    for label in labels:
+        # if the string is not in the dictionary, assign a new code to it
+        if label not in label_dict:
+            label_dict[label] = len(label_dict)
     
+    # Create a numpy array with the codes of the strings
+    arr = np.array([label_dict[label] for label in labels])
+    
+    return [label_dict, arr]
+
+def trim_epochs(epochs:list) -> np.ndarray:
+    """
+        Takes a list of epochs of different length and trims to the shorter
+        epoch. 
+        
+        Returns
+        -------
+            trimmed_epochs: array with shape [epochs, channels, samples]
+    """
+    # Initialize samples and channels counter
+    min_samples = np.inf
+    nchans = np.zeros(len(epochs), dtype=np.int16)
+    
+    # Get number of minimum samples
+    for [e,epoch] in enumerate(epochs):
+        epoch_shape = epoch.shape
+        epoch_len = int(np.max(epoch_shape))
+        nchans[e] = int(np.min(epoch_shape))
+
+        min_samples = int(np.min((min_samples, epoch_len)))
+
+    # Check that all epochs have same number of channels
+    if (np.sum(np.abs(np.diff(nchans))) != 0):
+        print("Not all epochs have the same number of channels")
+        return None
+
+    # Preallocate and fill output array
+    trimmed_epochs = np.zeros((len(epochs), nchans[0], min_samples))
+    for [e,epoch] in enumerate(epochs):
+        # Make sure epoch is in shape [chans, samples]
+        epoch_shape = epoch.shape
+        if epoch_shape[0] > epoch_shape[1]:
+            epoch = epoch.T
+
+        trimmed_epochs[e,:,:] = epoch[:,:min_samples]
+
+    return trimmed_epochs
+
+
+def drop_epochs_by_label(epochs:list[np.ndarray], labels:list[str], label_to_drop:list[str]) -> tuple[list[np.ndarray], list[str]]:
+    """
+    Drops epochs with a specific label from the list of epochs.
+
+    Parameters
+    ----------
+    epochs : List[np.ndarray]
+        List of EEG epochs.
+    labels : List[str]
+        List of corresponding marker labels.
+    label_to_drop : str
+        Label of the epochs to be dropped.
+
+    Returns
+    -------
+    Tuple[List[np.ndarray], List[str]]
+        A tuple containing the modified list of EEG epochs and labels.
+    """
+    # Use list comprehension to filter out epochs with the specified label
+    filtered_epochs = [epoch for epoch, label in zip(epochs, labels) if label not in label_to_drop]
+
+    # Update the list of labels accordingly
+    filtered_labels = [label for label in labels if label not in label_to_drop]
+
+    return filtered_epochs, filtered_labels
+
+def trim_epochs_by_length(epochs:list, length:int) -> np.ndarray:
+    """
+        Takes a list of epochs of different length and trims all into the specified number of seconds 
+        
+        Returns
+        -------
+            trimmed_epochs: array with shape [epochs, channels, samples]
+    """
