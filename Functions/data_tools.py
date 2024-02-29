@@ -563,11 +563,63 @@ def drop_epochs_by_label(epochs:list[np.ndarray], labels:list[str], label_to_dro
 
     return filtered_epochs, filtered_labels
 
-def trim_epochs_by_length(epochs:list, length:int) -> np.ndarray:
+def normalize_epochs_length(
+    epochs:list,
+    mode:str = "trim"
+    ) -> np.ndarray:
     """
-        Takes a list of epochs of different length and trims all into the specified number of seconds 
-        
-        Returns
-        -------
-            trimmed_epochs: array with shape [epochs, channels, samples]
+    Takes a list of epochs of different length and trims or zeropads all into the specified number of seconds 
+    
+    Parameters
+    ----------
+    epochs : list
+        List of epochs where each epoch is an array with [channels, samples].
+    mode : str
+        Mode in which to normalize the epochs. Can be either "trim" or "zeropad".
+
+    Returns
+    -------
+    normalized_epochs: np.ndarray
+        array with shape [epochs, channels, samples] with the length of the 
+        shortest ("trim") or longest ("zeropad") epoch.
     """
+      
+    # Preallocate list for organized epochs
+    normalized_epochs = []
+    transpose_flag = False
+    mode_options = {"trim": np.min, "zeropad": np.max}
+    mode_nsamples = {"trim": np.inf, "zeropad": 0}
+
+    # If the first epoch is [samples, channels] assume that they will all be
+    if epochs[0].shape[0] > epochs[0].shape[1]:
+        transpose_flag = True
+
+    # Get number of samples based on mode
+    for epoch in epochs:
+        epoch_nsamples = int(np.max(epoch.shape))
+        nsamples = int(mode_options[mode]((mode_nsamples[mode], epoch_nsamples)))
+        mode_nsamples[mode] = nsamples
+
+    for epoch in epochs:
+        # Transpose if needed for correct shape
+        if transpose_flag:
+            epoch = epoch.T
+
+        # Trim or zeropad epochs to desired length
+        if (mode == "trim"):
+            normalized_epochs.append(epoch[:, :nsamples]) 
+        elif (mode == "zeropad"):
+            pad_length = nsamples - epoch.shape[-1]
+            pad_dimensions = ((0,0), (0, pad_length))
+            normalized_epochs.append(np.pad(
+                epoch,
+                pad_dimensions,
+                'constant',
+                constant_values = 0))
+
+    # Return epochs to correct shape if needed
+    normalized_epochs = np.array(normalized_epochs)
+    if transpose_flag:
+        normalized_epochs = np.transpose(normalized_epochs, (0, 2, 1))
+
+    return normalized_epochs
