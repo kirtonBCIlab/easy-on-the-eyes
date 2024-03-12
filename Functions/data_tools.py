@@ -619,7 +619,7 @@ def normalize_epochs_length(
 
     # Return epochs to correct shape if needed
     normalized_epochs = np.array(normalized_epochs)
-    if transpose_flag:
-        normalized_epochs = np.transpose(normalized_epochs, (0, 2, 1))
+    # if transpose_flag:
+    #     normalized_epochs = np.transpose(normalized_epochs, (0, 2, 1))
 
     return normalized_epochs
