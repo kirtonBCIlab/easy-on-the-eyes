@@ -12,6 +12,7 @@ from pyriemann.tangentspace import TangentSpace
 from sklearn.linear_model import LogisticRegression
 from moabb.pipelines import ExtendedSSVEPSignal
 from sklearn.model_selection import cross_val_predict
+from .ssvep_transformer import SSVEPTransformer
 
 def rg_logreg(
     eeg_data: np.ndarray,
@@ -55,7 +56,8 @@ def fb_rg_logreg(
     stim_freqs:list[float],
     eeg_channels:list[str],
     srate:float,
-    labels:np.ndarray
+    labels:np.ndarray,
+    cv:int = 3,
     ) -> np.ndarray:
     """
         Implements Filter bank with  Riemmanian Geometry + Logistic regression classifier.
@@ -74,6 +76,8 @@ def fb_rg_logreg(
             The sampling rate of the EEG data [Hz].
         labels: np.ndarray
             The labels for each epoch.
+        cv: int
+            Cross-validation folds.
 
         Returns
         -------
@@ -85,13 +89,19 @@ def fb_rg_logreg(
 
     # Apply MOABB pipeline
     pipe =  make_pipeline(
+        SSVEPTransformer(shape=filter_bank_eeg.shape[1:]),
         ExtendedSSVEPSignal(),
         Covariances(estimator="lwf"),
         TangentSpace(),
         LogisticRegression(solver="lbfgs", multi_class="auto")
         )
+    
+    # Set up stratified k-fold
+    # stratified_kfold = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
 
-    predictions = pipe.fit(filter_bank_eeg, labels).predict(filter_bank_eeg)
+    reshaped_filter_bank = np.reshape(filter_bank_eeg, (filter_bank_eeg.shape[0], -1))
+    predictions = cross_val_predict(pipe, reshaped_filter_bank, labels, cv=cv)
+    # predictions = pipe.fit(filter_bank_eeg, labels).predict(filter_bank_eeg)
     # predictions = pipe.fit(eeg_data, labels).predict(eeg_data)
 
     return predictions
@@ -129,5 +139,10 @@ def filter_bank(
             filtered_data[e,:,:,f] = raw.get_data()
 
     return filtered_data
+
+def expand_ssvep(eeg_data):
+    """ Expands the input EEG data from shape [samples] into [frequencies, times, filter-bank]. """
+
+
 
 
