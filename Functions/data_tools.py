@@ -619,7 +619,54 @@ def normalize_epochs_length(
 
     # Return epochs to correct shape if needed
     normalized_epochs = np.array(normalized_epochs)
-    # if transpose_flag:
-    #     normalized_epochs = np.transpose(normalized_epochs, (0, 2, 1))
 
     return normalized_epochs
+
+def single_stimulus_mask(labels, stimulus):
+    '''
+    Returns the mask for the single stimulus of interest, and the mask for the entire list of labels.
+
+    Parameters
+    ----------
+        labels : list
+            List of labels from the Unity markers.
+        stimulus : str
+            Name of the stimulus of interest.   
+
+    Returns
+    -------
+        ssvep_labels : list
+            List of labels for the single stimulus of interest.
+                '0': "Stimulus Off"
+                '1-n': "SSVEP Frequencies of stimulus of interest"
+        bool_mask : list
+            List of labels for the entire list of labels.
+    '''
+
+    bool_mask = [False] * len(labels)
+    ssvep_labels = []
+    label_number = 1
+    stimulus_labels = {}
+
+    # For each label in the list
+    for i in range(1, len(labels)):
+        label_stim = labels[i].split(",")[-1]
+
+        if (label_stim == stimulus) and (labels[i-1] == "Stimulus Off"):
+            # Set label and preceding to true
+            bool_mask[i-1] = True
+            bool_mask[i] = True
+            
+            # Label for Stimulus Off
+            ssvep_labels.append(0)
+
+            # Add new labels to dictionaty
+            stim_frequency = labels[i].split(",")[-2]
+            if stim_frequency not in stimulus_labels:
+                stimulus_labels[stim_frequency] = label_number
+                label_number += 1
+
+            # Label for stimulus of interest
+            ssvep_labels.append(stimulus_labels[stim_frequency])
+
+    return ssvep_labels, bool_mask
