@@ -134,3 +134,65 @@ def ssvep_snr(f:np.ndarray, pxx:np.ndarray, stim_freq:float, noise_band:float, n
         return 10*np.log10(pxx_signal/pxx_noise)
     else:
         return pxx_signal/pxx_noise
+    
+def bandpass_filter(
+    eeg:np.ndarray,
+    srate:float,
+    f_low:float,
+    f_high:float,
+    f_order:int = 5
+    ) -> np.ndarray:
+    """
+        Applies a bandpass filter to the EEG data.
+
+        Parameters:
+            eeg: np.ndarray
+                The EEG data. Shape should be [n_epochs, n_channels, n_samples].
+            srate: float
+                The sampling rate of the EEG data [Hz].
+            f_low: float
+                The low cutoff frequency [Hz].
+            f_high: float
+                The high cutoff frequency [Hz].
+            f_order: int
+                The order of the filter.
+
+        Returns:
+            filtered_data: np.ndarray
+                The filtered EEG data.
+    """
+
+    # Create the bandpass filter
+    sos = signal.butter(
+        N = f_order,
+        Wn = [f_low, f_high],
+        btype = "band",
+        fs = srate,
+        output = "sos"
+        )
+
+    # Implement the bandpass filter
+    filtered_data = signal.sosfiltfilt(
+        sos= sos,
+        x = eeg,
+        )
+
+    return filtered_data
+
+def line_filter(eeg, srate, f_notch, f_order):
+
+    # Create the notch filter
+    [b,a] = signal.iirnotch(
+        w0 = f_notch,
+        Q = 30,
+        fs = srate,
+        )
+    
+    # Implement notch filter
+    filtered = signal.filtfilt(
+        b = b,
+        a = a,
+        x = eeg,
+        )
+
+    return filtered
